@@ -2,32 +2,39 @@ package moviestreamer.ggg.com.moviestreamer;
 
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.GridView;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
+import android.widget.TextView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import moviestreamer.ggg.com.moviestreamer.fragments.DetailFragment;
 import moviestreamer.ggg.com.moviestreamer.helpers.DataPersistence;
 import moviestreamer.ggg.com.moviestreamer.helpers.ServerSync;
 
-public class MainActivity extends AppCompatActivity implements ServerSync.ServerCallback{
+public class MainActivity extends AppCompatActivity implements ServerSync.ServerCallback, DetailFragment.OnFragmentInteractionListener{
 
     private Spinner spinnerOrderBy;
     private GridView gridViewThumnails;
     public ArrayAdapter<String> spinnerAdapter;
     private String spinnerOrderByArray[];
-    public ImageAdapter imageAdapter;
+    private ImageAdapter imageAdapter;
+    private boolean mTwoPane;
 
     private JSONArray movieDataJsonArray;
 
@@ -35,6 +42,8 @@ public class MainActivity extends AppCompatActivity implements ServerSync.Server
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+
         spinnerOrderByArray = new String[]{ "Order By Popularity", "Order By Rating", "Favourites"};
         spinnerOrderBy = (Spinner) findViewById(R.id.spinnerOrderBy);
         gridViewThumnails = (GridView) findViewById(R.id.gridViewThumbnails);
@@ -48,10 +57,17 @@ public class MainActivity extends AppCompatActivity implements ServerSync.Server
                         JSONObject tmpObj = movieDataJsonArray.getJSONObject(position);
                         if (tmpObj != null) {
 
-                            Intent intent = new Intent(getApplicationContext(), MovieDetails.class);
-                            intent.putExtra("movieJsonString", tmpObj.toString());
-                            Log.d("GridView", tmpObj.toString());
-                            startActivity(intent);
+                            if(mTwoPane){
+                                FragmentManager fm = getSupportFragmentManager();
+                                fm.beginTransaction()
+                                        .replace(R.id.detailContainer, DetailFragment.newInstance("","", tmpObj.toString()), DetailFragment.TAG)
+                                        .commit();
+                            } else {
+                                Intent intent = new Intent(getApplicationContext(), MovieDetails.class);
+                                intent.putExtra("movieJsonString", tmpObj.toString());
+                                Log.d("GridView", tmpObj.toString());
+                                startActivity(intent);
+                            }
 
                         }
                     } catch (JSONException e) {
@@ -92,6 +108,12 @@ public class MainActivity extends AppCompatActivity implements ServerSync.Server
             public void onNothingSelected(AdapterView<?> parent) {
             }
         });
+
+        if(findViewById(R.id.detailContainer) == null){
+            mTwoPane = false;
+        } else {
+            mTwoPane = true;
+        }
 
     }
 
@@ -135,17 +157,33 @@ public class MainActivity extends AppCompatActivity implements ServerSync.Server
     }
 
     @Override
-    public void onServerResponse(ServerSync.Endpoint endpoint, int responseCode, final String response) {
+    public void onServerResponse(final ServerSync.Endpoint endpoint, final int responseCode, final String response) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                try {
-                    movieDataJsonArray = new JSONObject(response).getJSONArray("results");
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                imageAdapter.updateURLs(movieDataJsonArray);
+                switch(endpoint){
+                    case DISCOVER:{
+
+                        try {
+                            movieDataJsonArray = new JSONObject(response).getJSONArray("results");
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        imageAdapter.updateURLs(movieDataJsonArray);
+                        break;
+                    }
+                    default:
+                        FragmentManager fm = getSupportFragmentManager();
+                        DetailFragment frag = (DetailFragment) fm.findFragmentByTag(DetailFragment.TAG);
+                        frag.onServerResponse(endpoint, responseCode, response);
+                        break;
+                    }
             }
         });
+    }
+
+    @Override
+    public void onFragmentInteraction(Uri uri) {
+
     }
 }
