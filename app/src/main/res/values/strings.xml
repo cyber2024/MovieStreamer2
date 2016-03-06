@@ -4,7 +4,7 @@
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
     <string name="title_activity_movie_details">MovieDetails</string>
-    <string name="themoviedb_apikey">39ec4d7704b6310a7305e91435a56c83</string>
+    <string name="themoviedb_apikey">INSERT YOUR THEMOVIEDB APIKEY HERE</string>
     <string name="synopsis">Synopsis goes here, discussing the film</string>
 
     <!-- TODO: Remove or change this placeholder text -->
